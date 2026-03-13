@@ -1770,8 +1770,16 @@ SCMSettings IHyprRenderer::getCMSettings(const NColorManagement::PImageDescripti
     } else
         srcTF = imageDescription->value().transferFunction;
 
-    const bool  needsSDRmod     = modifySDR && isSDR2HDR(imageDescription->value(), targetImageDescription->value());
-    const bool  needsHDRmod     = !needsSDRmod && isHDR2SDR(imageDescription->value(), targetImageDescription->value());
+    const auto  effectiveTargetTF =
+        targetImageDescription->value().transferFunction == CM_TRANSFER_FUNCTION_EXT_LINEAR && m_renderData.pMonitor->m_imageDescription ?
+        m_renderData.pMonitor->m_imageDescription->value().transferFunction :
+        targetImageDescription->value().transferFunction;
+
+    auto        effectiveTargetDescription = targetImageDescription->value();
+    effectiveTargetDescription.transferFunction = effectiveTargetTF;
+
+    const bool  needsSDRmod = modifySDR && isSDR2HDR(imageDescription->value(), effectiveTargetDescription);
+    const bool  needsHDRmod = !needsSDRmod && isHDR2SDR(imageDescription->value(), effectiveTargetDescription);
     const float maxLuminance    = needsHDRmod ?
            imageDescription->value().getTFMaxLuminance(-1) :
            (imageDescription->value().luminances.max > 0 ? imageDescription->value().luminances.max : imageDescription->value().luminances.reference);
@@ -1781,13 +1789,18 @@ SCMSettings IHyprRenderer::getCMSettings(const NColorManagement::PImageDescripti
     auto        toXYZ  = targetImageDescription->getPrimaries()->value().toXYZ();
 
     const bool needsMod = (imageDescription->value().transferFunction == CM_TRANSFER_FUNCTION_SRGB || imageDescription->value().transferFunction == CM_TRANSFER_FUNCTION_GAMMA22) &&
-        targetImageDescription->value().transferFunction == CM_TRANSFER_FUNCTION_ST2084_PQ &&
+        (effectiveTargetTF == CM_TRANSFER_FUNCTION_ST2084_PQ || effectiveTargetTF == CM_TRANSFER_FUNCTION_HLG) &&
         ((m_renderData.pMonitor->m_sdrSaturation > 0 && m_renderData.pMonitor->m_sdrSaturation != 1.0f) ||
          (m_renderData.pMonitor->m_sdrBrightness > 0 && m_renderData.pMonitor->m_sdrBrightness != 1.0f));
+
+    const auto sdrModTF = targetImageDescription->value().transferFunction == CM_TRANSFER_FUNCTION_EXT_LINEAR ? effectiveTargetTF :
+                                                                                                                   targetImageDescription->value().transferFunction;
+    const auto sdrBrightnessMultiplier = needsSDRmod && m_renderData.pMonitor->m_sdrBrightness > 0 ? m_renderData.pMonitor->m_sdrBrightness : 1.0f;
 
     return {
         .sourceTF        = srcTF,
         .targetTF        = targetImageDescription->value().transferFunction,
+        .sdrModTF        = sdrModTF,
         .srcTFRange      = {.min = imageDescription->value().getTFMinLuminance(needsSDRmod ? sdrMinLuminance : -1),
                             .max = imageDescription->value().getTFMaxLuminance(needsSDRmod ? sdrMaxLuminance : -1)},
         .dstTFRange      = {.min = targetImageDescription->value().getTFMinLuminance(needsSDRmod ? sdrMinLuminance : -1),
@@ -1802,7 +1815,7 @@ SCMSettings IHyprRenderer::getCMSettings(const NColorManagement::PImageDescripti
         .dstPrimaries2XYZ        = toXYZ.mat(),
         .needsSDRmod             = needsMod,
         .sdrSaturation           = needsSDRmod && m_renderData.pMonitor->m_sdrSaturation > 0 ? m_renderData.pMonitor->m_sdrSaturation : 1.0f,
-        .sdrBrightnessMultiplier = needsSDRmod && m_renderData.pMonitor->m_sdrBrightness > 0 ? m_renderData.pMonitor->m_sdrBrightness : 1.0f,
+        .sdrBrightnessMultiplier = sdrBrightnessMultiplier,
     };
 }
 

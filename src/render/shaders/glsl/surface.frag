@@ -78,7 +78,7 @@ void main() {
 #endif
 #if USE_SDR_MOD
                                  ,
-                                 sdrSaturation, sdrBrightnessMultiplier
+                                 sdrSaturation, sdrBrightnessMultiplier, sdrModTF
 #endif
 #endif
     );

@@ -219,7 +219,7 @@ vec4 doColorManagement(vec4 pixColor, int srcTF, int dstTF, mat3 convertMatrix, 
 #endif
 #if USE_SDR_MOD
                        ,
-                       float sdrSaturation, float sdrBrightnessMultiplier
+                       float sdrSaturation, float sdrBrightnessMultiplier, int sdrModTF
 #endif
 #endif
 ) {
@@ -235,10 +235,24 @@ vec4 doColorManagement(vec4 pixColor, int srcTF, int dstTF, mat3 convertMatrix, 
 #if USE_TONEMAP
     pixColor = tonemap(pixColor, dstxyz, maxLuminance, dstMaxLuminance, dstRefLuminance, srcRefLuminance);
 #endif
+
+#if USE_SDR_MOD
+    if (dstTF == CM_TRANSFER_FUNCTION_EXT_LINEAR && (sdrModTF == CM_TRANSFER_FUNCTION_ST2084_PQ || sdrModTF == CM_TRANSFER_FUNCTION_HLG)) {
+        vec2 modTFRange = sdrModTF == CM_TRANSFER_FUNCTION_ST2084_PQ ? vec2(HDR_MIN_LUMINANCE, HDR_MAX_LUMINANCE) : vec2(HDR_MIN_LUMINANCE, HLG_MAX_LUMINANCE);
+        vec4 modColor   = fromLinearNit(pixColor, sdrModTF, modTFRange);
+        modColor        = saturate(modColor, dstxyz, sdrSaturation);
+        modColor.rgb *= sdrBrightnessMultiplier;
+        modColor = toLinear(modColor, sdrModTF);
+        pixColor = toNit(modColor, modTFRange);
+    }
+#endif
+
     pixColor = fromLinearNit(pixColor, dstTF, dstTFRange);
 #if USE_SDR_MOD
-    pixColor = saturate(pixColor, dstxyz, sdrSaturation);
-    pixColor.rgb *= sdrBrightnessMultiplier;
+    if (!(dstTF == CM_TRANSFER_FUNCTION_EXT_LINEAR && (sdrModTF == CM_TRANSFER_FUNCTION_ST2084_PQ || sdrModTF == CM_TRANSFER_FUNCTION_HLG))) {
+        pixColor = saturate(pixColor, dstxyz, sdrSaturation);
+        pixColor.rgb *= sdrBrightnessMultiplier;
+    }
 #endif
 #endif
 

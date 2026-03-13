@@ -18,6 +18,7 @@ uniform float           iccLutSize;
 #if USE_SDR_MOD
 uniform float sdrSaturation;
 uniform float sdrBrightnessMultiplier;
+uniform int   sdrModTF; // eTransferFunction
 #endif
 
 #if USE_TONEMAP

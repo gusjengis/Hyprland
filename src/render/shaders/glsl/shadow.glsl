@@ -115,7 +115,7 @@ vec4 getShadow(vec4 pixColor, vec2 v_texcoord, float radius, float roundingPower
 #endif
 #if USE_SDR_MOD
                                  ,
-                                 sdrSaturation, sdrBrightnessMultiplier
+                                 sdrSaturation, sdrBrightnessMultiplier, sdrModTF
 #endif
 #endif
     );

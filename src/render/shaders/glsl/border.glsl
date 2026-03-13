@@ -191,7 +191,7 @@ vec4 getBorder(vec2 v_texcoord, float alpha, vec2 fullSizeUntransformed, float r
 #endif
 #if USE_SDR_MOD
                                  ,
-                                 sdrSaturation, sdrBrightnessMultiplier
+                                 sdrSaturation, sdrBrightnessMultiplier, sdrModTF
 #endif
 #endif
     );

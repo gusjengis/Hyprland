@@ -115,6 +115,7 @@ namespace Render {
     struct SCMSettings {
         NColorManagement::eTransferFunction  sourceTF = NColorManagement::CM_TRANSFER_FUNCTION_GAMMA22;
         NColorManagement::eTransferFunction  targetTF = NColorManagement::CM_TRANSFER_FUNCTION_GAMMA22;
+        NColorManagement::eTransferFunction  sdrModTF = NColorManagement::CM_TRANSFER_FUNCTION_SRGB;
         STFRange                             srcTFRange;
         STFRange                             dstTFRange;
         float                                srcRefLuminance = 80;

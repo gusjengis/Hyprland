@@ -1122,6 +1122,7 @@ void CHyprOpenGLImpl::passCMUniforms(WP<CShader> shader, const NColorManagement:
     shader->setUniformFloat(SHADER_DST_MAX_LUMINANCE, settings.dstMaxLuminance);
     shader->setUniformFloat(SHADER_SDR_SATURATION, settings.sdrSaturation);
     shader->setUniformFloat(SHADER_SDR_BRIGHTNESS, settings.sdrBrightnessMultiplier);
+    shader->setUniformInt(SHADER_SDR_MOD_TF, settings.sdrModTF);
 
     if (!targetImageDescription->value().icc.present) {
         const auto cacheKey = std::make_pair(imageDescription->id(), targetImageDescription->id());
@@ -1309,13 +1310,14 @@ WP<CShader> CHyprOpenGLImpl::renderToFBInternal(SP<ITexture> tex, const STexture
 
     const bool CANT_CHECK_CM_EQUALITY =
         data.cmBackToSRGB || data.finalMonitorCM || (!g_pHyprRenderer->m_renderData.surface || !g_pHyprRenderer->m_renderData.surface->m_colorManagement);
+    const bool WORK_BUFFER_LINEAR = WORK_BUFFER_IMAGE_DESCRIPTION->value().transferFunction == CM_TRANSFER_FUNCTION_EXT_LINEAR;
 
     const bool skipCM = !*PENABLECM || !m_cmSupported                                                    /* CM unsupported or disabled */
         || g_pHyprRenderer->m_renderData.pMonitor->doesNoShaderCM()                                      /* no shader needed */
         || (SOURCE_IMAGE_DESCRIPTION->id() == TARGET_IMAGE_DESCRIPTION->id() && !CANT_CHECK_CM_EQUALITY) /* Source and target have the same image description */
         || (((*PPASS && canPassHDRSurface) ||
-             (*PPASS == 1 && !isHDRSurface && m_renderData.pMonitor->m_cmType != NCMType::CM_HDR && m_renderData.pMonitor->m_cmType != NCMType::CM_HDR_EDID)) &&
-            m_renderData.pMonitor->inFullscreenMode()) /* Fullscreen window with pass cm enabled */;
+              (*PPASS == 1 && !isHDRSurface && m_renderData.pMonitor->m_cmType != NCMType::CM_HDR && m_renderData.pMonitor->m_cmType != NCMType::CM_HDR_EDID)) &&
+            m_renderData.pMonitor->inFullscreenMode() && !WORK_BUFFER_LINEAR) /* Fullscreen window with pass cm enabled */;
 
     if (data.allowDim && g_pHyprRenderer->m_renderData.currentWindow &&
         (g_pHyprRenderer->m_renderData.currentWindow->m_notRespondingTint->value() > 0 || g_pHyprRenderer->m_renderData.currentWindow->m_dimPercent->value() > 0))
@@ -1330,8 +1332,15 @@ WP<CShader> CHyprOpenGLImpl::renderToFBInternal(SP<ITexture> tex, const STexture
         if (TARGET_IMAGE_DESCRIPTION->value().icc.present)
             shaderFeatures |= SH_FEAT_ICC;
         else {
-            const bool  needsSDRmod     = isSDR2HDR(SOURCE_IMAGE_DESCRIPTION->value(), TARGET_IMAGE_DESCRIPTION->value());
-            const bool  needsHDRmod     = !needsSDRmod && isHDR2SDR(SOURCE_IMAGE_DESCRIPTION->value(), TARGET_IMAGE_DESCRIPTION->value());
+            const auto  effectiveTargetTF =
+                TARGET_IMAGE_DESCRIPTION->value().transferFunction == CM_TRANSFER_FUNCTION_EXT_LINEAR && g_pHyprRenderer->m_renderData.pMonitor ?
+                g_pHyprRenderer->m_renderData.pMonitor->m_imageDescription->value().transferFunction :
+                TARGET_IMAGE_DESCRIPTION->value().transferFunction;
+            auto        effectiveTargetDescription = TARGET_IMAGE_DESCRIPTION->value();
+            effectiveTargetDescription.transferFunction = effectiveTargetTF;
+
+            const bool  needsSDRmod     = isSDR2HDR(SOURCE_IMAGE_DESCRIPTION->value(), effectiveTargetDescription);
+            const bool  needsHDRmod     = !needsSDRmod && isHDR2SDR(SOURCE_IMAGE_DESCRIPTION->value(), effectiveTargetDescription);
             const float maxLuminance    = needsHDRmod ?
                    SOURCE_IMAGE_DESCRIPTION->value().getTFMaxLuminance(-1) :
                    (SOURCE_IMAGE_DESCRIPTION->value().luminances.max > 0 ? SOURCE_IMAGE_DESCRIPTION->value().luminances.max : SOURCE_IMAGE_DESCRIPTION->value().luminances.reference);
@@ -1343,7 +1352,7 @@ WP<CShader> CHyprOpenGLImpl::renderToFBInternal(SP<ITexture> tex, const STexture
             if (!data.finalMonitorCM &&
                 (SOURCE_IMAGE_DESCRIPTION->value().transferFunction == CM_TRANSFER_FUNCTION_SRGB ||
                  SOURCE_IMAGE_DESCRIPTION->value().transferFunction == CM_TRANSFER_FUNCTION_GAMMA22) &&
-                TARGET_IMAGE_DESCRIPTION->value().transferFunction == CM_TRANSFER_FUNCTION_ST2084_PQ &&
+                (effectiveTargetTF == CM_TRANSFER_FUNCTION_ST2084_PQ || effectiveTargetTF == CM_TRANSFER_FUNCTION_HLG) &&
                 ((g_pHyprRenderer->m_renderData.pMonitor->m_sdrSaturation > 0 && g_pHyprRenderer->m_renderData.pMonitor->m_sdrSaturation != 1.0f) ||
                  (g_pHyprRenderer->m_renderData.pMonitor->m_sdrBrightness > 0 && g_pHyprRenderer->m_renderData.pMonitor->m_sdrBrightness != 1.0f)))
                 shaderFeatures |= SH_FEAT_SDR_MOD;
