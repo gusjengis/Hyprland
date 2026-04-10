@@ -41,11 +41,14 @@ in
   ];
 
   # Hyprland with its internal dependencies.
-  hyprland = lib.composeManyExtensions (with self.overlays; [
-    udis86
-    glaze
-    hyprland-no-deps
-  ]);
+  hyprland = lib.composeManyExtensions (
+    with self.overlays;
+    [
+      udis86
+      glaze
+      hyprland-no-deps
+    ]
+  );
 
   # Hyprland without any dependencies.
   hyprland-no-deps =
@@ -56,7 +59,7 @@ in
     in
     {
       hyprland = final.callPackage ./default.nix {
-        stdenv = final.gcc15Stdenv;
+        stdenv = final.clangStdenv;
         commit = self.rev or "";
         revCount = self.sourceInfo.revCount or "";
         inherit date version;
