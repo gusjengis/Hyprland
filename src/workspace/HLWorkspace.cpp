@@ -91,6 +91,11 @@ void Workspace::CHLWorkspace::init(PHLWORKSPACE self) {
 
     applyTypeSpecificRules(RULEFORTHIS);
 
+    m_activeChangedHook = m_events.activeChanged.listen([this] {
+        if (const auto PMONITOR = m_monitor.lock(); PMONITOR)
+            PMONITOR->updateWorkspaceRuleBlur();
+    });
+
     if (self->m_wasCreatedEmpty)
         if (auto cmd = RULEFORTHIS.m_onCreatedEmptyRunCmd)
             Config::Supplementary::executor()->spawnWithRules(*cmd, self);
@@ -260,6 +265,9 @@ void Workspace::CHLWorkspace::updateWindowData() {
 
         w->updateWindowData(WORKSPACERULE.value_or(Config::CWorkspaceRule{}));
     }
+
+    if (const auto PMONITOR = m_monitor.lock(); PMONITOR)
+        PMONITOR->updateWorkspaceRuleBlur();
 }
 
 void Workspace::CHLWorkspace::forceReportSizesToWindows() {
@@ -314,4 +322,7 @@ void Workspace::CHLWorkspace::updateWindows() {
         if (t->window())
             t->window()->m_ruleApplicator->propertiesChanged(Desktop::Rule::RULE_PROP_ON_WORKSPACE);
     }
+
+    if (const auto PMONITOR = m_monitor.lock(); PMONITOR)
+        PMONITOR->updateWorkspaceRuleBlur();
 }

@@ -77,6 +77,7 @@ namespace Workspace {
 
       private:
         SP<Layout::CSpace>           m_space;
+        CHyprSignalListener          m_activeChangedHook;
         CWorkspaceWindowFocusTracker m_focusTracker;
         std::string                  m_name       = "";
         bool                         m_visible    = false;
