@@ -418,6 +418,7 @@ namespace Monitor {
             CHyprSignalListener needsFrame;
             CHyprSignalListener presented;
             CHyprSignalListener commit;
+            CHyprSignalListener commitResult;
         } m_listeners;
 
         int   m_supportsWideColor = 0;
