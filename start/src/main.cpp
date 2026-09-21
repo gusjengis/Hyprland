@@ -47,6 +47,9 @@ static void terminateChildOnSignal(int signal) {
 }
 
 int main(int argc, const char** argv, const char** envp) {
+    // timestamps, so these lines can be lined up against the journal and hyprland's own log
+    g_loggerMain->setTime(true);
+
     g_logger = makeUnique<Hyprutils::CLI::CLoggerConnection>(*g_loggerMain);
     g_logger->setName("start-hyprland");
     g_logger->setLogLevel(Hyprutils::CLI::LOG_DEBUG);

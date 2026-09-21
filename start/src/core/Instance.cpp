@@ -80,8 +80,24 @@ void CHyprlandInstance::runHyprlandThread(bool safeMode, bool lockedCrash) {
                 break;
             }
 
-            if (WIFEXITED(status))
+            // a signalled child is gone just like an exited one. Without this break, the next
+            // waitpid() has no child left to reap and fails with ECHILD, hiding the signal.
+            if (WIFSIGNALED(status)) {
+                const int SIG = WTERMSIG(status);
+                g_logger->log(Hyprutils::CLI::LOG_ERR, "Hyprland (pid {}) was killed by signal {} ({}), {}", m_hlPid, SIG, strsignal(SIG),
+#ifdef WCOREDUMP
+                              WCOREDUMP(status) ? "core dumped" : "no core dumped"
+#else
+                              "core dump status unknown"
+#endif
+                );
                 break;
+            }
+
+            if (WIFEXITED(status)) {
+                g_logger->log(Hyprutils::CLI::LOG_DEBUG, "Hyprland (pid {}) exited with code {}", m_hlPid, WEXITSTATUS(status));
+                break;
+            }
         }
 
         if (write(m_wakeupWrite.get(), "vax", 3) < 0)
