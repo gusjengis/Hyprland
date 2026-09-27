@@ -653,6 +653,7 @@ std::vector<SP<IValue>> Values::getConfigValues() {
         MS<Int>("render:ctm_animation", "Whether to enable a fade animation for CTM changes.", 2,
                 {.min = 0, .max = 2, .map = OptionMap{{"disable", 0}, {"enable", 1}, {"auto", 2}}}),
         MS<Bool>("render:cm_enabled", "Enable Color Management pipelines (requires restart to fully take effect)", true),
+        MS<Bool>("render:cm_client_protocol", "Allow clients to specify surface color spaces (requires restart)", true),
         MS<Bool>("render:send_content_type", "Report content type to allow monitor profile autoswitch", true),
         MS<Int>("render:cm_auto_hdr", "Auto-switch to hdr mode when fullscreen app is in hdr", 1,
                 {.min = 0, .max = 2, .map = OptionMap{{"disable", 0}, {"hdr", 1}, {"hdredid", 2}}}),
