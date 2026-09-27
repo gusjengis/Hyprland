@@ -132,6 +132,7 @@ void CProtocolManager::onMonitorModeChange(PHLMONITOR pMonitor) {
 CProtocolManager::CProtocolManager() {
 
     static const auto PENABLECM = CConfigValue<Config::INTEGER>("render:cm_enabled");
+    static const auto PCLIENTCM = CConfigValue<Config::INTEGER>("render:cm_client_protocol");
     static const auto PDEBUGCM  = CConfigValue<Config::INTEGER>("debug:full_cm_proto");
     static const auto PCMV1_2   = CConfigValue<Config::INTEGER>("experimental:wp_cm_1_2");
     static const auto PENABLECT = CConfigValue<Config::INTEGER>("render:commit_timing_enabled");
@@ -231,7 +232,7 @@ CProtocolManager::CProtocolManager() {
     PROTO::imageCaptureSource = makeUnique<CImageCaptureSourceProtocol>(); // ctor inits actual protos, output and toplevel
     PROTO::imageCopyCapture   = makeUnique<CImageCopyCaptureProtocol>(&ext_image_copy_capture_manager_v1_interface, 1, "ImageCopyCapture");
 
-    if (*PENABLECM)
+    if (*PENABLECM && *PCLIENTCM)
         PROTO::colorManagement = makeUnique<CColorManagementProtocol>(&wp_color_manager_v1_interface, *PCMV1_2 ? 3 : 1, "ColorManagement", *PDEBUGCM);
 
     // ! please read the top of this file before adding another protocol
