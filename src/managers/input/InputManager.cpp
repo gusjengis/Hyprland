@@ -1883,7 +1883,8 @@ bool CInputManager::refocusLastWindow(PHLMONITOR pMonitor) {
 
         if (foundSurface && !foundSurface->m_hlSurface->keyboardFocusable()) {
             const auto PLASTWINDOW = Desktop::focusState()->window();
-            Desktop::focusState()->fullWindowFocus(PLASTWINDOW, Desktop::FOCUS_REASON_FFM);
+            if (PLASTWINDOW && PLASTWINDOW->m_monitor == pMonitor && PLASTWINDOW->m_workspace && PLASTWINDOW->m_workspace->isVisibleNotCovered())
+                Desktop::focusState()->fullWindowFocus(PLASTWINDOW, Desktop::FOCUS_REASON_FFM);
         }
 
         refocus();
