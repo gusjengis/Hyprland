@@ -14,6 +14,7 @@ class CRectPassElement : public IPassElement {
         float               blurA = 1.F;
         std::optional<CBox> blurPatternBox;
         PHLWINDOWREF        blurOwner;
+        CRegion             blurExcludeRegion;
         CBox                clipBox;
 
         // internal

@@ -1167,14 +1167,18 @@ void CHyprOpenGLImpl::renderRectWithBlurInternal(const CBox& box, const CHyprCol
             .roundingPower = data.roundingPower,
         };
     const bool usePrecomputedBlur = data.xray && !g_pHyprRenderer->blurProviderRequiresLiveBlur();
-    const auto blurredFB = usePrecomputedBlur ? g_pHyprRenderer->m_renderData.pMonitor->resources()->m_blurFB :
-                                                g_pHyprRenderer->blurMainFramebuffer(data.blurA, damage, {.patternBox = patternBox, .owner = data.blurOwner, .shape = shape});
-    const auto blurredBG = blurredFB->getTexture();
+    const auto blurredFB          = usePrecomputedBlur ? g_pHyprRenderer->m_renderData.pMonitor->resources()->m_blurFB :
+                                                         g_pHyprRenderer->blurMainFramebuffer(data.blurA, damage, {.patternBox = patternBox, .owner = data.blurOwner, .shape = shape});
+    const auto blurredBG          = blurredFB->getTexture();
 
     const auto SAVEDRENDERMODIF               = g_pHyprRenderer->m_renderData.renderModif;
     g_pHyprRenderer->m_renderData.renderModif = {}; // fix shit
 
     const auto blurUV = resolveBlurUV(box, blurredBG->m_size);
+
+    // Keep sampling damage intact: adjacent blur pixels still need the original
+    // neighborhood. Exemptions affect only compositing the blurred result.
+    damage.subtract(data.blurExcludeRegion);
 
     renderTexture(blurredBG, box,
                   STextureRenderData{
