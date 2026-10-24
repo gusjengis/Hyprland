@@ -1,4 +1,5 @@
 #include "Renderer.hpp"
+#include "WorkspaceBlurExclusion.hpp"
 #include "../Compositor.hpp"
 #include "../helpers/math/Math.hpp"
 #include <algorithm>
@@ -1102,6 +1103,42 @@ void IHyprRenderer::renderSessionLockSurface(WP<SSessionLockSurface> pSurface, P
         &renderdata);
 }
 
+CRegion IHyprRenderer::workspaceBlurExclusion(PHLMONITOR pMonitor, bool occludeWindows) {
+    CWorkspaceBlurExclusion exclusion;
+    for (const auto level : {ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM}) {
+        for (const auto& weak : pMonitor->m_layerSurfaceLayers[level]) {
+            const auto layer = weak.lock();
+            if (!layer || !layer->mapped() || !layer->acceptsInput() || !layer->alphaNonZero() || !layer->m_ruleApplicator->noWorkspaceBlur().valueOrDefault())
+                continue;
+            const auto surface = layer->wlSurface()->resource();
+            if (!surface)
+                continue;
+
+            // Clients can bound a shaped widget with their input region instead
+            // of exempting transparent padding. Click-through layers fall back
+            // to their surface bounds.
+            exclusion.addLayer(surface->m_current.effectiveInputRegion(), CBox{layer->position(Desktop::View::IGeometric::GEOMETRIC_CURRENT), surface->m_current.size});
+        }
+    }
+
+    if (exclusion.empty())
+        return {};
+
+    if (occludeWindows) {
+        // Special-workspace blur also covers ordinary application windows.
+        // A desktop layer's exemption must not punch sharp holes through them.
+        for (const auto& window : Desktop::windowState()->windows()) {
+            if (!window->mapped() || window->isHidden() || window->onSpecialWorkspace() || window->m_state & WINDOW_STATE_PINNED || window->presentation().alphaTotal() == 0.F ||
+                !shouldRenderWindow(window, pMonitor))
+                continue;
+            const auto offset = window->m_workspace ? window->m_workspace->m_renderOffset->value() : Vector2D{};
+            exclusion.occlude(window->getFullWindowBoundingBox().translate(offset + window->presentation().floatingOffset()));
+        }
+    }
+
+    return exclusion.forMonitor(CBox{pMonitor->m_position, pMonitor->m_size}, pMonitor->m_scale);
+}
+
 void IHyprRenderer::renderAllClientsForWorkspace(PHLMONITOR pMonitor, PHLWORKSPACE pWorkspace, const Time::steady_tp& time, const Vector2D& translate, const float& scale) {
     static auto PBLUR            = CConfigValue<Config::INTEGER>("decoration:blur:enabled");
     static auto PXPMODE          = CConfigValue<Config::INTEGER>("render:xp_mode");
@@ -1188,10 +1225,12 @@ void IHyprRenderer::renderAllClientsForWorkspace(PHLMONITOR pMonitor, PHLWORKSPA
 
     if (ACTIVEWORKSPACEBLURA > 0.F) {
         CRectPassElement::SRectData data;
-        data.box   = {translate.x, translate.y, pMonitor->m_transformedSize.x * scale, pMonitor->m_transformedSize.y * scale};
-        data.color = CHyprColor(0, 0, 0, 0);
-        data.blur  = true;
-        data.blurA = ACTIVEWORKSPACEBLURA;
+        data.box               = {translate.x, translate.y, pMonitor->m_transformedSize.x * scale, pMonitor->m_transformedSize.y * scale};
+        data.color             = CHyprColor(0, 0, 0, 0);
+        data.blur              = true;
+        data.blurA             = ACTIVEWORKSPACEBLURA;
+        data.blurExcludeRegion = workspaceBlurExclusion(pMonitor, false);
+        RENDERMODIFDATA.applyToRegion(data.blurExcludeRegion);
 
         m_renderPass.add(makeUnique<CRectPassElement>(data));
     }
@@ -1218,10 +1257,12 @@ void IHyprRenderer::renderAllClientsForWorkspace(PHLMONITOR pMonitor, PHLWORKSPA
 
     if UNLIKELY (SPECIALBLUR != 0.F) {
         CRectPassElement::SRectData data;
-        data.box   = {translate.x, translate.y, pMonitor->m_transformedSize.x * scale, pMonitor->m_transformedSize.y * scale};
-        data.color = CHyprColor(0, 0, 0, 0);
-        data.blur  = true;
-        data.blurA = SPECIALBLUR;
+        data.box               = {translate.x, translate.y, pMonitor->m_transformedSize.x * scale, pMonitor->m_transformedSize.y * scale};
+        data.color             = CHyprColor(0, 0, 0, 0);
+        data.blur              = true;
+        data.blurA             = SPECIALBLUR;
+        data.blurExcludeRegion = workspaceBlurExclusion(pMonitor, true);
+        RENDERMODIFDATA.applyToRegion(data.blurExcludeRegion);
 
         m_renderPass.add(makeUnique<CRectPassElement>(data));
     }

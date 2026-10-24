@@ -87,13 +87,14 @@ void CGLElementRenderer::draw(WP<CRectPassElement> element, const CRegion& damag
         g_pHyprOpenGL->renderRect(m_data.box, m_data.color, {.damage = &damage, .round = m_data.round, .roundingPower = m_data.roundingPower});
     else
         g_pHyprOpenGL->renderRect(m_data.box, m_data.color,
-                                  {.round          = m_data.round,
-                                   .roundingPower  = m_data.roundingPower,
-                                   .blur           = true,
-                                   .blurA          = m_data.blurA,
-                                   .xray           = m_data.xray,
-                                   .blurPatternBox = m_data.blurPatternBox,
-                                   .blurOwner      = m_data.blurOwner});
+                                  {.round             = m_data.round,
+                                   .roundingPower     = m_data.roundingPower,
+                                   .blur              = true,
+                                   .blurA             = m_data.blurA,
+                                   .xray              = m_data.xray,
+                                   .blurPatternBox    = m_data.blurPatternBox,
+                                   .blurOwner         = m_data.blurOwner,
+                                   .blurExcludeRegion = m_data.blurExcludeRegion});
 };
 
 void CGLElementRenderer::draw(WP<CShadowPassElement> element, const CRegion& damage) {

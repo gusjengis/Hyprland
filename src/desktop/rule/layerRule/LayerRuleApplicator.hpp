@@ -53,6 +53,7 @@ namespace Desktop::Rule {
         DEFINE_PROP(bool, dimAround, false)
         DEFINE_PROP(bool, xray, false)
         DEFINE_PROP(bool, noScreenShare, false)
+        DEFINE_PROP(bool, noWorkspaceBlur, false)
 
         DEFINE_PROP(Config::INTEGER, order, 0)
         DEFINE_PROP(Config::INTEGER, aboveLock, 0)

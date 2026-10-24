@@ -161,6 +161,7 @@ namespace Render::GL {
             bool                xray          = false;
             std::optional<CBox> blurPatternBox;
             PHLWINDOWREF        blurOwner;
+            CRegion             blurExcludeRegion;
         };
 
         struct STextureRenderData {

@@ -424,6 +424,24 @@ TEST(ConfigLuaRequire, absolutePathLoadsAndTracksFile) {
     expectTracked(mgr, module);
 }
 
+TEST(ConfigLuaBindingsInternal, layerRuleEffectsCanBeFeatureDetected) {
+    CScopedCompositor compositor;
+    CTempDir          tmp;
+    const auto        mainConfig = tmp.path() / "hyprland.lua";
+    writeFile(mainConfig, "");
+
+    CConfigManager mgr;
+    CConfigManagerPluginLuaTestAccessor::initializeOwnedLuaState(mgr, mainConfig);
+    const auto L = CConfigManagerPluginLuaTestAccessor::luaState(mgr);
+    ASSERT_EQ(luaL_dostring(L, R"(
+        assert(hl.supports_layer_rule_effect("no_workspace_blur"))
+        assert(hl.supports_layer_rule_effect("blur"))
+        assert(not hl.supports_layer_rule_effect("not_a_real_effect"))
+    )"),
+              LUA_OK)
+        << lua_tostring(L, -1);
+}
+
 TEST(ConfigLuaRequire, relativePathResolvesFromConfigDirectory) {
     CScopedCompositor compositor;
     CTempDir          tmp;

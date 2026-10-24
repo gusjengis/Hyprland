@@ -190,6 +190,7 @@ namespace {
         {"order", []() -> ILuaConfigValue* { return new CLuaConfigInt(0); }, LE::LAYER_RULE_EFFECT_ORDER},
         {"above_lock", []() -> ILuaConfigValue* { return new CLuaConfigInt(0, 0, 2); }, LE::LAYER_RULE_EFFECT_ABOVE_LOCK},
         {"no_screen_share", []() -> ILuaConfigValue* { return new CLuaConfigBool(false); }, LE::LAYER_RULE_EFFECT_NO_SCREEN_SHARE},
+        {"no_workspace_blur", []() -> ILuaConfigValue* { return new CLuaConfigBool(false); }, LE::LAYER_RULE_EFFECT_NO_WORKSPACE_BLUR},
     };
 
     static_assert(sizeof(LAYER_RULE_EFFECT_DESCS) / sizeof(SLayerRuleEffectDesc) == LE::LAYER_RULE_EFFECT_LAST_STATIC - 1);
@@ -1398,7 +1399,14 @@ static int hlLayerRule(lua_State* L) {
     return 1;
 }
 
+static int hlSupportsLayerRuleEffect(lua_State* L) {
+    const std::string_view name = luaL_checkstring(L, 1);
+    lua_pushboolean(L, Internal::findDescByName(LAYER_RULE_EFFECT_DESCS, name) || Desktop::Rule::layerEffects()->get(name).has_value());
+    return 1;
+}
+
 void Internal::registerConfigRuleBindings(lua_State* L, CConfigManager* mgr) {
+    Internal::setFn(L, "supports_layer_rule_effect", hlSupportsLayerRuleEffect);
     Internal::setMgrFn(L, mgr, "config", hlConfig);
     Internal::setMgrFn(L, mgr, "get_config", hlGetConfig);
     Internal::setMgrFn(L, mgr, "device", hlDevice);
