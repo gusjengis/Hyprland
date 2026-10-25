@@ -437,9 +437,15 @@ TEST(ConfigLuaBindingsInternal, layerRuleEffectsCanBeFeatureDetected) {
         assert(hl.supports_layer_rule_effect("no_workspace_blur"))
         assert(hl.supports_layer_rule_effect("blur"))
         assert(not hl.supports_layer_rule_effect("not_a_real_effect"))
+        hl.layer_rule({
+            name = "test-workspace-blur-exemption",
+            match = { namespace = "^test-widget$" },
+            no_workspace_blur = true,
+        })
     )"),
               LUA_OK)
         << lua_tostring(L, -1);
+    EXPECT_TRUE(mgr.getErrors().empty()) << mgr.getErrors();
 }
 
 TEST(ConfigLuaRequire, relativePathResolvesFromConfigDirectory) {
